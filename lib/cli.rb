@@ -10,6 +10,7 @@ class CLI
     @rows = 0
     @cols = 0
     @mines = 0
+    @flags = 0
   end
 
   def start
@@ -47,9 +48,11 @@ class CLI
       @mines = get_mines(@rows, @cols)
     end
     @game = Game.new(@rows, @cols, @mines)
+    @flags = 0
   end
 
   def repeat_a_game
+    @flags = 0
     @game = Game.new(@rows, @cols, @mines)
   end
 
@@ -66,12 +69,11 @@ class CLI
   end
 
   def calculate_max_mines(rows, cols)
-    if rows <= 2 || cols <= 2
-      [[rows * cols - 1, 3].min, MIN_MINES].max
-    else
-      total_cells = rows * cols
-      [total_cells, MAX_ADJACENT_MINES * total_cells / 8].min
-    end
+    total_cells = rows * cols
+    min_cells_without_mines = (rows - 1) * (cols - 1)
+    max_mines = [total_cells - min_cells_without_mines, total_cells - 1].min
+    max_mines = [max_mines, MAX_ADJACENT_MINES].min if rows == 3 && cols == 3
+    max_mines
   end
 
   def get_valid_input(prompt, min, max = Float::INFINITY)
@@ -104,27 +106,27 @@ class CLI
       action = input[2] if input.size > 2
 
       if valid_move?(row, col)
+        cell = @game.board.grid[row][col]
         if action.to_s.downcase == 'f'
-          @game.board.grid[row][col].toggle_flag
+          next if cell.revealed || (!cell.flagged? && @flags >= @mines)
+
+          action = nil
+          cell.toggle_flag
+          cell.flagged? ? @flags += 1 : @flags -= 1
         else
           @game.reveal(row, col)
         end
-      else
-        puts 'Invalid move. Try again.'
-      end
+        break if @game.status == :lost
 
-      @game.status = :won if @game.check_victory
+        @game.status = :won if @game.check_victory
+      else
+        puts 'Invalid move. Please enter a valid row and column within the board boundaries.'
+      end
     end
 
     display_board(true)
-    if @game.status == :won
-      puts 'Congratulations! You won!'
-    else
-      puts 'Game Over. You hit a mine!'
-    end
+    puts @game.status == :won ? colorize('Congratulations, you won!', :green) : colorize('Game over, you lost.', :red)
   end
-
-  private
 
   def valid_move?(row, col)
     row.between?(0, @game.rows - 1) && col.between?(0, @game.cols - 1)
@@ -135,7 +137,7 @@ class CLI
 
     col_width = 3
 
-    puts 'MineSearcher'
+    puts "MineSearcher - Mines: #{@mines}, Flags: #{@flags}"
     puts ''
     puts ' ' * (col_width + 1) + (1..@game.cols).map { |num| num.to_s.center(col_width) }.join(' ')
     puts ''
@@ -147,14 +149,39 @@ class CLI
         cell = @game.board.grid[row][col]
 
         if reveal_all || cell.revealed?
-          print " #{cell.to_s.center(col_width)}"
+          cell_display = colorize(cell.to_s.center(col_width), cell_color(cell))
         elsif cell.flagged?
-          print " #{cell.to_s.center(col_width)}"
+          cell_display = colorize('F'.center(col_width), :cyan)
         else
-          print " #{'*'.center(col_width)}"
+          cell_display = "*".center(col_width)
         end
+
+        print " #{cell_display}"
       end
       puts
     end
+  end
+
+  def cell_color(cell)
+    return :red if cell.mine?
+
+    case cell.adjacent_mines
+    when 1..3 then :yellow
+    when 4..5 then :blue
+    else :magenta
+    end
+  end
+
+  def colorize(text, color)
+    colors = {
+      red: 31,
+      green: 32,
+      yellow: 33,
+      blue: 34,
+      magenta: 35,
+      cyan: 36,
+      white: 37
+    }
+    "\e[#{colors[color]}m#{text}\e[0m"
   end
 end

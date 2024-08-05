@@ -15,6 +15,7 @@ class Game
   def reveal(row, col)
     cell = @board.grid[row][col]
     if cell.has_mine
+      cell.flagged = false
       @status = :lost
       reveal_all_mines
     else
@@ -33,7 +34,7 @@ class Game
   def reveal_all_mines
     @board.grid.each do |row|
       row.each do |cell|
-        cell.reveal if cell.has_mine
+        cell.reveal # if cell.has_mine # To review only mines
       end
     end
   end
