@@ -33,13 +33,13 @@ class Board
         cell = @grid[row][col]
         next unless cell.mine?
 
-        unless adjacent_cells(row, col).any? { |r, c| !@grid[r][c].mine? }
-          adj_row, adj_col = adjacent_cells(row, col).find { |r, c| !@grid[r][c].mine? }
-          next unless adj_row && adj_col
+        next if adjacent_cells(row, col).any? { |r, c| !@grid[r][c].mine? }
 
-          cell.has_mine = false
-          @grid[adj_row][adj_col].place_mine
-        end
+        adj_row, adj_col = adjacent_cells(row, col).find { |r, c| !@grid[r][c].mine? }
+        next unless adj_row && adj_col
+
+        cell.has_mine = false
+        @grid[adj_row][adj_col].place_mine
       end
     end
   end
