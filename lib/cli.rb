@@ -94,6 +94,8 @@ class CLI
       display_board
       puts "Enter your move (row, column, and optional 'F' to flag/unflag), 'new' to start a new game, or 'exit' to quit:"
       input = gets.chomp.split
+      next unless input[0]
+
       exit if input[0].downcase == 'exit'
 
       if input[0].downcase == 'new'
@@ -105,23 +107,21 @@ class CLI
       col = input[1].to_i - 1
       action = input[2] if input.size > 2
 
-      if valid_move?(row, col)
-        cell = @game.board.grid[row][col]
-        if action.to_s.downcase == 'f'
-          next if cell.revealed || (!cell.flagged? && @flags >= @mines)
+      next unless valid_move?(row, col)
 
-          action = nil
-          cell.toggle_flag
-          cell.flagged? ? @flags += 1 : @flags -= 1
-        else
-          @game.reveal(row, col)
-        end
-        break if @game.status == :lost
+      cell = @game.board.grid[row][col]
+      if action.to_s.downcase == 'f'
+        next if cell.revealed || (!cell.flagged? && @flags >= @mines)
 
-        @game.status = :won if @game.check_victory
+        action = nil
+        cell.toggle_flag
+        cell.flagged? ? @flags += 1 : @flags -= 1
       else
-        puts 'Invalid move. Please enter a valid row and column within the board boundaries.'
+        @game.reveal(row, col)
       end
+      break if @game.status == :lost
+
+      @game.status = :won if @game.check_victory
     end
 
     display_board(true)
@@ -148,13 +148,13 @@ class CLI
       @game.cols.times do |col|
         cell = @game.board.grid[row][col]
 
-        if reveal_all || cell.revealed?
-          cell_display = colorize(cell.to_s.center(col_width), cell_color(cell))
-        elsif cell.flagged?
-          cell_display = colorize('F'.center(col_width), :cyan)
-        else
-          cell_display = "*".center(col_width)
-        end
+        cell_display = if reveal_all || cell.revealed?
+                         colorize(cell.to_s.center(col_width), cell_color(cell))
+                       elsif cell.flagged?
+                         colorize('F'.center(col_width), :cyan)
+                       else
+                         '*'.center(col_width)
+                       end
 
         print " #{cell_display}"
       end

@@ -33,9 +33,7 @@ class Game
 
   def reveal_all_mines
     @board.grid.each do |row|
-      row.each do |cell|
-        cell.reveal # if cell.has_mine # To review only mines
-      end
+      row.each(&:reveal)
     end
   end
 end
